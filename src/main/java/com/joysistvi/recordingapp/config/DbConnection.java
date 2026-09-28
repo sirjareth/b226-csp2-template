@@ -20,6 +20,5 @@ public class DbConnection {
         return DriverManager.getConnection(URL, USERNAME, PASSWORD);
     }
 
-    // ducking exception -> throw
-    // connection object
+
 }

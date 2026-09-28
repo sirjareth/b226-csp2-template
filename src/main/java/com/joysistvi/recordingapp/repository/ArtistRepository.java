@@ -10,9 +10,17 @@ public interface ArtistRepository {
 
     List<Artist> searchArtist(String keyword);
 
+    Artist getArtistById(int id);
+
     boolean createArtist(Artist artist);
 
     boolean updateArtist(Artist artist);
 
     boolean deleteArtist(int id);
+
+    boolean archiveArtist(int id);
+
+    boolean restoreArtist(int id);
+
+    List<Artist> readArchivedArtist();
 }

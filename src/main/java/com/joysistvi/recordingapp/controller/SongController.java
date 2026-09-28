@@ -18,6 +18,10 @@ public class SongController {
         return songService.getAllSongs();
     }
 
+    public Song handleGetSongById(int id) {
+        return songService.getSongById(id);
+    }
+
     public List<Song> handleViewArchivedSongs() {
         return songService.getArchivedSongs();
     }

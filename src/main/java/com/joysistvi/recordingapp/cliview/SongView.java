@@ -3,7 +3,6 @@ package com.joysistvi.recordingapp.cliview;
 import com.joysistvi.recordingapp.controller.SongController;
 import com.joysistvi.recordingapp.model.Song;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Scanner;
 
@@ -11,11 +10,13 @@ public class SongView {
 
     private final SongController songController; // Composition
     private final Scanner scanner;
+    private final boolean isAdmin;
 
     // Constructor injection
-    public SongView(SongController songController, Scanner scanner) {
+    public SongView(SongController songController, Scanner scanner, boolean isAdmin) {
         this.songController = songController;
         this.scanner = scanner;
+        this.isAdmin = isAdmin;
     }
 
     public void run() {
@@ -28,13 +29,13 @@ public class SongView {
             switch (choice) {
                 case 1 -> viewAllSongs();
                 case 2 -> searchSong();
-                case 3 -> addSong();
-                case 4 -> updateSong();
-                case 5 -> deleteSong();
-                case 6 -> archiveSong();
-                case 7 -> restoreSong();
-                case 8 -> viewArchivedSongs();
-                case 0 -> System.out.println("Returning to main menu...");
+                case 3 -> { if (isAdmin) addSong(); else denyAccess(); }
+                case 4 -> { if (isAdmin) updateSong(); else denyAccess(); }
+                case 5 -> { if (isAdmin) deleteSong(); else denyAccess(); }
+                case 6 -> { if (isAdmin) archiveSong(); else denyAccess(); }
+                case 7 -> { if (isAdmin) restoreSong(); else denyAccess(); }
+                case 8 -> { if (isAdmin) viewArchivedSongs(); else denyAccess(); }
+                case 0 -> System.out.println("Returning to dashboard...");
                 default -> System.out.println("Invalid choice. Try again.");
             }
 
@@ -45,26 +46,19 @@ public class SongView {
         } while (choice != 0);
     }
 
-    // Clears the console using the OS's native command: "cls" on Windows, "clear"
-    // on Mac/Linux. Works when run from an actual terminal. Note: this has no
-    // visible effect in IntelliJ's built-in Run console since it isn't a real
-    // OS terminal — run the app from a terminal window to see it in action.
-    public static void clearScreen() {
-        System.out.print("\033[H\033[2J");
-        System.out.flush();
-    }
-
     private void printMenu() {
         clearScreen();
-        System.out.println("\n===== SONG MANAGEMENT =====");
+        System.out.println("\n---- " + (isAdmin ? "SONG MANAGEMENT" : "SONG CATALOG") + " ----");
         System.out.println("1. View All Songs");
         System.out.println("2. Search Song");
-        System.out.println("3. Add Song");
-        System.out.println("4. Update Song");
-        System.out.println("5. Delete Song");
-        System.out.println("6. Archive Song");
-        System.out.println("7. Restore Song");
-        System.out.println("8. View Archived Songs");
+        if (isAdmin) {
+            System.out.println("3. Add Song");
+            System.out.println("4. Update Song");
+            System.out.println("5. Delete Song");
+            System.out.println("6. Archive Song");
+            System.out.println("7. Restore Song");
+            System.out.println("8. View Archived Songs");
+        }
         System.out.println("0. Back");
     }
 
@@ -74,22 +68,26 @@ public class SongView {
     }
 
     private void viewAllSongs() {
+        System.out.println("\n----- View All Songs -----");
         List<Song> songs = songController.handleViewAllSongs();
         printSongs(songs);
     }
 
     private void viewArchivedSongs() {
+        System.out.println("\n----- View All Archived Songs -----");
         List<Song> songs = songController.handleViewArchivedSongs();
         printSongs(songs);
     }
 
     private void searchSong() {
+        System.out.println("\n----- Search Song -----");
         System.out.print("Enter title keyword: ");
         String keyword = scanner.nextLine();
         printSongs(songController.handleSearchSong(keyword));
     }
 
     private void addSong() {
+        System.out.println("\n----- Add Song -----");
         System.out.print("Title: ");
         String title = scanner.nextLine();
 
@@ -109,28 +107,61 @@ public class SongView {
     }
 
     private void updateSong() {
+        System.out.println("\n----- Update Song -----");
         System.out.print("Song ID to update: ");
         int id = readInt();
 
-        System.out.print("New Title: ");
+        Song existingSong = songController.handleGetSongById(id);
+
+        if (existingSong == null) {
+            System.out.println("Song not found.");
+            return;
+        }
+
+        System.out.println("\nPress Enter to keep the current value.");
+
+        System.out.print("Title [" + existingSong.getTitle() + "]: ");
         String title = scanner.nextLine();
+        if (title.isBlank()) {
+            title = existingSong.getTitle();
+        }
 
-        System.out.print("New Length (e.g. 3:45): ");
+        System.out.print("Length [" + existingSong.getLength() + "]: ");
         String length = scanner.nextLine();
+        if (length.isBlank()) {
+            length = existingSong.getLength();
+        }
 
-        System.out.print("New Genre: ");
+        System.out.print("Genre [" + existingSong.getGenre() + "]: ");
         String genre = scanner.nextLine();
+        if (genre.isBlank()) {
+            genre = existingSong.getGenre();
+        }
 
-        System.out.print("New Album ID: ");
-        int albumId = readInt();
+        System.out.print("Album ID [" + existingSong.getAlbumId() + "]: ");
+        String albumInput = scanner.nextLine();
 
-        Song song = new Song(id, title, length, genre, albumId);
+        int albumId = existingSong.getAlbumId();
 
-        boolean success = songController.handleUpdateSong(song);
-        System.out.println(success ? "Song updated successfully." : "Failed to update song.");
+        if (!albumInput.isBlank()) {
+            try {
+                albumId = Integer.parseInt(albumInput);
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid Album ID. Keeping the current value.");
+            }
+        }
+
+        Song updatedSong = new Song(id, title, length, genre, albumId);
+
+        boolean success = songController.handleUpdateSong(updatedSong);
+
+        System.out.println(success
+                ? "Song updated successfully."
+                : "Failed to update song.");
     }
 
     private void deleteSong() {
+        System.out.println("\n----- Delete Song -----");
         System.out.print("Song ID to delete: ");
         int id = readInt();
 
@@ -139,6 +170,7 @@ public class SongView {
     }
 
     private void archiveSong() {
+        System.out.println("\n----- Archive Song -----");
         System.out.print("Song ID to archive: ");
         int id = readInt();
 
@@ -147,6 +179,7 @@ public class SongView {
     }
 
     private void restoreSong() {
+        System.out.println("\n----- Restore Song -----");
         System.out.print("Song ID to restore: ");
         int id = readInt();
 
@@ -155,6 +188,7 @@ public class SongView {
     }
 
     private void printSongs(List<Song> songs) {
+
         if (songs.isEmpty()) {
             System.out.println("No songs found.");
             return;
@@ -174,6 +208,17 @@ public class SongView {
         }
 
         System.out.println(border);
+    }
+
+    private void denyAccess() {
+        System.out.println("Access denied. Admins only.");
+    }
+
+    // Clears the console using ANSI escape codes. Works in real terminals and in
+    // IntelliJ's Run console IF "Emulate terminal in output console" is enabled.
+    private void clearScreen() {
+        System.out.print("\033[H\033[2J");
+        System.out.flush();
     }
 
     // Reads an int safely, re-prompting on invalid input, then consumes the trailing newline

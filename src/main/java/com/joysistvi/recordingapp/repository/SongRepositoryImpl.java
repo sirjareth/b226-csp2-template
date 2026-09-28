@@ -49,6 +49,54 @@ public class SongRepositoryImpl implements SongRepository{
         return songs;
     }
 
+    @Override
+    public Song getSongById(int id) {
+
+        String query = """
+        SELECT
+            s.id,
+            s.title,
+            s.length,
+            s.genre,
+            s.album_id,
+            a.name AS album_name
+        FROM songs s
+        INNER JOIN albums a
+            ON s.album_id = a.id
+        WHERE s.id = ?
+        AND s.is_archived = false
+    """;
+
+        try (
+                Connection conn = dbConnection.connect();
+                PreparedStatement stmt = conn.prepareStatement(query)
+        ) {
+
+            stmt.setInt(1, id);
+
+            ResultSet rs = stmt.executeQuery();
+
+            if (rs.next()) {
+
+                Song song = new Song();
+
+                song.setId(rs.getInt("id"));
+                song.setTitle(rs.getString("title"));
+                song.setLength(rs.getString("length"));
+                song.setGenre(rs.getString("genre"));
+                song.setAlbumId(rs.getInt("album_id"));
+                song.setAlbumName(rs.getString("album_name"));
+
+                return song;
+            }
+
+        } catch (SQLException e) {
+            System.out.println("Get Song By ID Error: " + e.getMessage());
+        }
+
+        return null;
+    }
+
     // Search Song by title (case-insensitive)
     public List<Song> searchSong(String keyword) {
         List<Song> songs = new ArrayList<>();
@@ -139,20 +187,37 @@ public class SongRepositoryImpl implements SongRepository{
     // Update Song
     @Override
     public boolean updateSong(Song song) {
-        String query = "UPDATE songs SET title = ?, length = ?, genre = ? WHERE id = ?";
-        try (Connection conn = dbConnection.connect();
-             PreparedStatement prep = conn.prepareStatement(query)) {
+
+        String query = """
+            UPDATE songs
+            SET
+                title = ?,
+                length = ?,
+                genre = ?,
+                album_id = ?
+            WHERE id = ?
+            """;
+
+        try (
+                Connection conn = dbConnection.connect();
+                PreparedStatement prep = conn.prepareStatement(query)
+        ) {
 
             prep.setString(1, song.getTitle());
             prep.setString(2, song.getLength());
             prep.setString(3, song.getGenre());
-            prep.setInt(4, song.getId());
+            prep.setInt(4, song.getAlbumId());
+            prep.setInt(5, song.getId());
 
             int rowsAffected = prep.executeUpdate();
+
             return rowsAffected > 0;
+
         } catch (SQLException e) {
             System.out.println("Update Song: " + e.getMessage());
+            e.printStackTrace();
         }
+
         return false;
     }
 

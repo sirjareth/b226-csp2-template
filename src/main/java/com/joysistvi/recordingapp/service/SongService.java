@@ -8,6 +8,8 @@ public interface SongService {
 
     List<Song> getAllSongs();
 
+    Song getSongById(int id);
+
     List<Song> searchSong(String keyword);
 
     List<Song> getArchivedSongs();
